@@ -2,7 +2,7 @@ let candidates = [];
 let topics = [];
 let topicColors = {};  // Object to store colors for each topic
 let subtopicColors = {}; // Object to store colors for each subtopic
-
+ 
 // Function to load Excel data from a Google Sheets URL
 function loadExcelFromGoogleSheet(sheetUrl) {
     fetch(sheetUrl)
@@ -11,18 +11,18 @@ function loadExcelFromGoogleSheet(sheetUrl) {
             const workbook = XLSX.read(data, { type: 'array' });
             const sheetName = workbook.SheetNames[0];
             const jsonData = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
-
+ 
             // Process the Excel data
             processExcelData(jsonData);
         })
         .catch(error => console.error('Error loading Excel file from Google Sheets:', error));
 }
-
+ 
 // Function to process Excel data and update candidates and topics
 function processExcelData(data) {
     candidates = [];
     topics = new Set();  // Use a set to handle unique topics automatically
-
+ 
     data.forEach(row => {
         const candidateName = row.name;
         const image = row.image;
@@ -33,9 +33,9 @@ function processExcelData(data) {
         const link = row.link;
         const topic = row.topic;
         const subtopic = row.subtopic || ''; // New subtopic column, default to empty string if not provided
-
+ 
         topics.add(topic); // Add topic to the set (duplicates are automatically handled)
-
+ 
         let candidate = candidates.find(c => c.name === candidateName);
         if (!candidate) {
             candidate = {
@@ -46,62 +46,62 @@ function processExcelData(data) {
             };
             candidates.push(candidate);
         }
-
+ 
         // Initialize topic if it doesn't exist
         if (!candidate.promises[topic]) {
             candidate.promises[topic] = {};
         }
-
+ 
         // Initialize subtopic if it doesn't exist under the topic
         if (!candidate.promises[topic][subtopic]) {
             candidate.promises[topic][subtopic] = [];
         }
-
+ 
         // Add the promise under the appropriate subtopic
         candidate.promises[topic][subtopic].push({ title, description, page, link });
     });
-
+ 
     topics = Array.from(topics);
-
+ 
     // Assign colors to topics dynamically
     assignColorsToTopics(topics);
     assignColorsToSubtopics(); // Assign colors to subtopics dynamically
-
+ 
     // Create sections for each topic
     createSectionsForTopics(topics);
-
+ 
     // Update the UI with new candidates and topics
     populateCandidateCheckboxes(candidates);
     populateTopicCheckboxes(topics);
     updateDisplay();
 }
-
+ 
 // Function to create sections for each topic
 function createSectionsForTopics(topics) {
     const contentContainer = d3.select("#content");
     contentContainer.html(''); // Clear existing content
-
+ 
     topics.forEach(topic => {
         const topicSection = contentContainer.append("div")
             .attr("id", `${topic.toLowerCase().replace(/\s+/g, '-')}-section`)
             .attr("class", "topic-section");
-
+ 
         topicSection.append("div")
             .attr("class", "section-title-container")
             .append("h2")
             .attr("class", "section-title")
             .text(topic);
-
+ 
         topicSection.append("div")
             .attr("class", "candidate-card-container")
             .attr("id", `${topic.toLowerCase().replace(/\s+/g, '-')}`);
     });
 }
-
+ 
 function populateCandidateCheckboxes(candidates) {
     const candidateCheckboxesContainer = d3.select("#candidate-checkboxes");
     candidateCheckboxesContainer.html(''); // Clear existing content
-
+ 
     // "All" option
     const allLabel = candidateCheckboxesContainer.append("label");
     allLabel.append("input")
@@ -114,7 +114,7 @@ function populateCandidateCheckboxes(candidates) {
         });
     allLabel.append("span").text("All");
     allLabel.append("br");
-
+ 
     candidates.forEach(candidate => {
         const checkboxLabel = candidateCheckboxesContainer.append("label");
         checkboxLabel.append("input")
@@ -125,11 +125,11 @@ function populateCandidateCheckboxes(candidates) {
         checkboxLabel.append("br");
     });
 }
-
+ 
 function populateTopicCheckboxes(topics) {
     const topicCheckboxesContainer = d3.select("#topic-checkboxes");
     topicCheckboxesContainer.html(''); // Clear existing content
-
+ 
     // "All" option
     const allLabel = topicCheckboxesContainer.append("label");
     allLabel.append("input")
@@ -142,7 +142,7 @@ function populateTopicCheckboxes(topics) {
         });
     allLabel.append("span").text("All");
     allLabel.append("br");
-
+ 
     topics.forEach(topic => {
         const checkboxLabel = topicCheckboxesContainer.append("label");
         checkboxLabel.append("input")
@@ -153,7 +153,7 @@ function populateTopicCheckboxes(topics) {
         checkboxLabel.append("br");
     });
 }
-
+ 
 function updateDisplay() {
     const selectedCandidates = [];
     d3.selectAll("#candidate-checkboxes input:checked").each(function() {
@@ -161,25 +161,25 @@ function updateDisplay() {
             selectedCandidates.push(this.value);
         }
     });
-
+ 
     const selectedTopics = [];
     d3.selectAll("#topic-checkboxes input:checked").each(function() {
         if (this.value !== "all") {
             selectedTopics.push(this.value);
         }
     });
-
+ 
     let filteredCandidates = candidates;
-
+ 
     if (selectedCandidates.length > 0) {
         filteredCandidates = filteredCandidates.filter(candidate => selectedCandidates.includes(candidate.name));
     }
-
+ 
     topics.forEach(topic => {
         const sectionId = `#${topic.toLowerCase().replace(/\s+/g, '-')}`;
         d3.select(sectionId).selectAll(".candidate-card").remove(); // Clear existing cards
     });
-
+ 
     filteredCandidates.forEach(candidate => {
         Object.keys(candidate.promises).forEach(topic => {
             if (selectedTopics.length === 0 || selectedTopics.includes(topic)) {
@@ -187,7 +187,7 @@ function updateDisplay() {
             }
         });
     });
-
+ 
     topics.forEach(topic => {
         const sectionId = `#${topic.toLowerCase().replace(/\s+/g, '-')}-section`;
         if (d3.select(`#${topic.toLowerCase().replace(/\s+/g, '-')}`).selectAll(".candidate-card").empty()) {
@@ -196,44 +196,44 @@ function updateDisplay() {
             d3.select(sectionId).classed("hidden", false);
         }
     });
-
+ 
     // Equalize heights after updating display
     equalizePromiseHeights();
 }
-
+ 
 // Function to create or update candidate cards with promises grouped by subtopic
 function createOrUpdateCandidateCard(containerId, candidate, promisesByTopic, topicClass) {
     const container = d3.select(containerId);
-
+ 
     // Create or select a single card for the candidate
     let candidateCard = container.select(`.candidate-card[data-candidate="${candidate.name}"]`);
-
+ 
     if (candidateCard.empty()) {
         candidateCard = container.append("div")
             .attr("class", `candidate-card ${topicClass}`)
             .attr("data-candidate", candidate.name);
-
+ 
         candidateCard.append("img")
             .attr("src", candidate.image)
             .attr("alt", candidate.name);
-
+ 
         candidateCard.append("div")
             .attr("class", "party-symbol")
             .append("img")
             .attr("src", candidate.partySymbol)
             .attr("alt", `${candidate.name} party symbol`);
-
+ 
         candidateCard.append("h3")
             .text(candidate.name);
-
+ 
         candidateCard.append("div")
             .attr("class", "promises-container");
     }
-
+ 
     // Add or update promises grouped by subtopic
     Object.keys(promisesByTopic).forEach(subtopic => {
         const subtopicPromises = promisesByTopic[subtopic];
-
+ 
         // Add each promise separately, even if they have the same subtopic
         subtopicPromises.forEach(promise => {
             const promiseContainer = candidateCard.select(".promises-container")
@@ -243,11 +243,11 @@ function createOrUpdateCandidateCard(containerId, candidate, promisesByTopic, to
                 .style("margin-bottom", "10px")
                 .style("padding", "10px")
                 .style("border-radius", "8px");
-
+ 
             promiseContainer.append("div")
                 .attr("class", `promise ${topicClass}`)
                 .html(`<p class="promise-title">${promise.title}</p><p class="promise-page">Page: ${promise.page}</p><p>${promise.description}</p>`);
-
+ 
             // Add the "Rationale" button under each promise if there's a valid link
             if (promise.link && promise.link.trim() !== '') {
                 promiseContainer.append("button")
@@ -260,16 +260,16 @@ function createOrUpdateCandidateCard(containerId, candidate, promisesByTopic, to
         });
     });
 }
-
+ 
 // Function to equalize the height of promise containers within each topic
 function equalizePromiseHeights() {
     topics.forEach(topic => {
         const promiseContainers = d3.select(`#${topic.toLowerCase().replace(/\s+/g, '-')}`)
                                     .selectAll('.promise-container')
                                     .nodes();
-        
+       
         let maxHeight = 0;
-
+ 
         // Calculate the maximum height of promise containers within this topic
         promiseContainers.forEach(container => {
             const height = container.getBoundingClientRect().height;
@@ -277,14 +277,14 @@ function equalizePromiseHeights() {
                 maxHeight = height;
             }
         });
-
+ 
         // Set the maximum height for all promise containers within this topic
         promiseContainers.forEach(container => {
             container.style.height = `${maxHeight}px`;
         });
     });
 }
-
+ 
 // Function to assign colors to topics dynamically
 function assignColorsToTopics(topics) {
     topics.forEach(topic => {
@@ -293,7 +293,7 @@ function assignColorsToTopics(topics) {
         }
     });
 }
-
+ 
 // Function to assign colors to subtopics dynamically
 function assignColorsToSubtopics() {
     // Loop through each candidate and each topic to assign subtopic colors
@@ -307,29 +307,51 @@ function assignColorsToSubtopics() {
         });
     });
 }
-
+ 
 // Function to get color by subtopic
 function getColorBySubtopic(subtopic) {
     return subtopicColors[subtopic] || "#ffffff"; // Default to white if the subtopic doesn't have a specific color
 }
-
+ 
 let hueShift = 0; // Initialize hue shift
-
+ 
 // Function to generate a unique lighter color using HSL
 function generateRandomColor() {
     const saturation = 60; // Fixed saturation level for vibrancy
     const lightness = 80;  // Fixed lightness level for lighter colors
-
+ 
     hueShift += 137.5; // Golden angle approximation to distribute hues evenly
     const hue = hueShift % 360; // Ensure hue is within 0-360 degrees
-
+ 
     return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
 }
-
+ 
+// Add event listener to close checkboxes when clicking outside the filter container
+document.addEventListener("click", function(event) {
+    const filterContainer = document.querySelector(".filter-container");
+    if (!filterContainer.contains(event.target)) {
+        closeAllCheckboxes();
+    }
+});
+ 
+// Function to close all checkboxes
+function closeAllCheckboxes() {
+    document.querySelectorAll(".checkboxes").forEach(checkboxContainer => {
+        checkboxContainer.style.display = "none";
+    });
+}
+ 
+// Modify the existing toggleCheckboxes function to close other checkboxes when opening a new one
 function toggleCheckboxes(id) {
     const checkboxes = document.getElementById(id);
-    checkboxes.style.display = checkboxes.style.display === "block" ? "none" : "block";
+    if (checkboxes.style.display === "block") {
+        checkboxes.style.display = "none";
+    } else {
+        closeAllCheckboxes();  // Close all other checkboxes
+        checkboxes.style.display = "block";
+    }
 }
-
+ 
+ 
 // Load the Excel file from the Google Sheets URL
 loadExcelFromGoogleSheet('https://docs.google.com/spreadsheets/d/1_q6IaRErhJnPM_pTwiI7pGvOTJ4PJJRMTaz4zr-rmio/export?format=xlsx'); // Replace with the actual Google Sheets URL in export format
