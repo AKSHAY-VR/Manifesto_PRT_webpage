@@ -19,6 +19,7 @@ function loadExcelFromGoogleSheet(sheetUrl) {
 }
  
 // Function to process Excel data and update candidates and topics
+// Function to process Excel data and update candidates and topics
 function processExcelData(data) {
     candidates = [];
     topics = new Set();  // Use a set to handle unique topics automatically
@@ -61,6 +62,20 @@ function processExcelData(data) {
         candidate.promises[topic][subtopic].push({ title, description, page, link });
     });
  
+    // Sort the subtopics numerically (assuming subtopics are numbers)
+    candidates.forEach(candidate => {
+        Object.keys(candidate.promises).forEach(topic => {
+            const sortedSubtopics = Object.keys(candidate.promises[topic]).sort((a, b) => parseInt(a) - parseInt(b));
+            const sortedPromises = {};
+ 
+            sortedSubtopics.forEach(subtopic => {
+                sortedPromises[subtopic] = candidate.promises[topic][subtopic];
+            });
+ 
+            candidate.promises[topic] = sortedPromises;
+        });
+    });
+ 
     topics = Array.from(topics);
  
     // Assign colors to topics dynamically
@@ -75,6 +90,7 @@ function processExcelData(data) {
     populateTopicCheckboxes(topics);
     updateDisplay();
 }
+ 
  
 // Function to create sections for each topic
 function createSectionsForTopics(topics) {
@@ -352,6 +368,5 @@ function toggleCheckboxes(id) {
     }
 }
  
- 
 // Load the Excel file from the Google Sheets URL
-loadExcelFromGoogleSheet('https://docs.google.com/spreadsheets/d/1_q6IaRErhJnPM_pTwiI7pGvOTJ4PJJRMTaz4zr-rmio/export?format=xlsx'); // Replace with the actual Google Sheets URL in export format
+loadExcelFromGoogleSheet('https://docs.google.com/spreadsheets/d/1_q6IaRErhJnPM_pTwiI7pGvOTJ4PJJRMTaz4zr-rmio/export?format=xlsx'); // Replace with the actual Google Sheets URL in export format" 
