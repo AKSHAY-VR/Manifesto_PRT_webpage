@@ -19,7 +19,6 @@ function loadExcelFromGoogleSheet(sheetUrl) {
 }
  
 // Function to process Excel data and update candidates and topics
-// Function to process Excel data and update candidates and topics
 function processExcelData(data) {
     candidates = [];
     topics = new Set();  // Use a set to handle unique topics automatically
@@ -35,7 +34,10 @@ function processExcelData(data) {
         const topic = row.topic;
         const subtopic = row.subtopic || ''; // New subtopic column, default to empty string if not provided
  
-        topics.add(topic); // Add topic to the set (duplicates are automatically handled)
+        // Only add valid titles (not N/A) to the title count
+        if (title !== "-" && title.trim() !== "") {
+            topics.add(topic); // Add topic to the set (duplicates are automatically handled)
+        }
  
         let candidate = candidates.find(c => c.name === candidateName);
         if (!candidate) {
@@ -43,9 +45,21 @@ function processExcelData(data) {
                 name: candidateName,
                 image: image,
                 partySymbol: partySymbol,
-                promises: {}
+                promises: {},
+                titleCount: 0, // Initialize title count
+                linkCount: 0   // Initialize link count
             };
             candidates.push(candidate);
+        }
+ 
+        // Increment the title count only for valid titles
+        if (title !== "-" && title.trim() !== "") {
+            candidate.titleCount++;
+        }
+ 
+        // Increment the link count if a valid link exists
+        if (link && link.trim() !== '') {
+            candidate.linkCount++;
         }
  
         // Initialize topic if it doesn't exist
@@ -82,6 +96,9 @@ function processExcelData(data) {
     assignColorsToTopics(topics);
     assignColorsToSubtopics(); // Assign colors to subtopics dynamically
  
+    // Populate the new candidate cards section
+    populateCandidateCardsSection(candidates);
+ 
     // Create sections for each topic
     createSectionsForTopics(topics);
  
@@ -89,13 +106,62 @@ function processExcelData(data) {
     populateCandidateCheckboxes(candidates);
     populateTopicCheckboxes(topics);
     updateDisplay();
+ 
+    // Create Fantasy 11 page
+    createFantasy11Page(candidates);
 }
  
+// Function to populate the new candidate cards section
+function populateCandidateCardsSection(candidates) {
+    const candidateCardsContainer = d3.select("#candidate-cards");
+    candidateCardsContainer.html(''); // Clear existing content
+ 
+    candidates.forEach(candidate => {
+        const candidateCard = candidateCardsContainer.append("div")
+            .attr("class", "new-candidate-card");
+ 
+        candidateCard.append("img")
+            .attr("src", candidate.image)
+            .attr("alt", candidate.name);
+ 
+        candidateCard.append("h3")
+            .text(candidate.name);
+ 
+        candidateCard.append("p")
+            .attr("class", "summary-stats")
+            .text(`Rationals per Promise: ${candidate.linkCount}/${candidate.titleCount}`);
+ 
+        candidateCard.append("div")
+            .attr("class", "party-symbol")
+            .append("img")
+            .attr("src", candidate.partySymbol)
+            .attr("alt", `${candidate.name} party symbol`);
+    });
+ 
+    // Ensure all candidate cards have the same width
+    equalizeCandidateCardWidths();
+}
+ 
+// Function to equalize the width of candidate cards
+function equalizeCandidateCardWidths() {
+    const cards = document.querySelectorAll('.new-candidate-card');
+    let maxWidth = 0;
+ 
+    cards.forEach(card => {
+        const width = card.getBoundingClientRect().width;
+        if (width > maxWidth) {
+            maxWidth = width;
+        }
+    });
+ 
+    cards.forEach(card => {
+        card.style.width = `${maxWidth}px`;
+    });
+}
  
 // Function to create sections for each topic
 function createSectionsForTopics(topics) {
     const contentContainer = d3.select("#content");
-    contentContainer.html(''); // Clear existing content
  
     topics.forEach(topic => {
         const topicSection = contentContainer.append("div")
@@ -283,7 +349,7 @@ function equalizePromiseHeights() {
         const promiseContainers = d3.select(`#${topic.toLowerCase().replace(/\s+/g, '-')}`)
                                     .selectAll('.promise-container')
                                     .nodes();
-       
+ 
         let maxHeight = 0;
  
         // Calculate the maximum height of promise containers within this topic
@@ -368,5 +434,65 @@ function toggleCheckboxes(id) {
     }
 }
  
+// Function to display the Manifesto Promises page
+function showManifestoPage() {
+    document.getElementById('content').style.display = 'block'; // Show the original content
+    document.getElementById('fantasy11-content').style.display = 'none'; // Hide Fantasy 11 content
+}
+ 
+// Function to display the Fantasy 11 page
+function showFantasy11Page() {
+    document.getElementById('content').style.display = 'none'; // Hide the original content
+    document.getElementById('fantasy11-content').style.display = 'block'; // Show Fantasy 11 content
+}
+ 
+// Function to create the Fantasy 11 page content
+function createFantasy11Page(candidates) {
+    const fantasyContainer = d3.select("#fantasy-candidates-container");
+    fantasyContainer.html(''); // Clear any existing content
+ 
+    candidates.forEach(candidate => {
+        const candidateContainer = fantasyContainer.append("div")
+            .attr("class", "fantasy-candidate-container");
+ 
+        candidateContainer.append("h3")
+            .attr("class", "fantasy-candidate-title")
+            .text(candidate.name);
+ 
+        // Iterate over each topic for the candidate
+        Object.keys(candidate.promises).forEach(topic => {
+            const subtopics = candidate.promises[topic];
+            Object.keys(subtopics).forEach(subtopic => {
+                const promises = subtopics[subtopic];
+ 
+                // Add promises as selectable options
+                promises.forEach(promise => {
+                    const promiseContainer = candidateContainer.append("div")
+                        .attr("class", "fantasy-promise");
+ 
+                    promiseContainer.append("input")
+                        .attr("type", "checkbox")
+                        .attr("value", promise.title);
+ 
+                    promiseContainer.append("label")
+                        .text(`${promise.title} - Page: ${promise.page}`);
+                });
+            });
+        });
+    });
+}
+ 
+// Function to display the pop-up with three boxes
+function showEmptyBoxes() {
+    const modal = document.getElementById("popup-modal");
+    modal.style.display = "block"; // Show the modal
+}
+ 
+// Function to close the pop-up modal
+function closePopup() {
+    const modal = document.getElementById("popup-modal");
+    modal.style.display = "none"; // Hide the modal
+}
+ 
 // Load the Excel file from the Google Sheets URL
-loadExcelFromGoogleSheet('https://docs.google.com/spreadsheets/d/1_q6IaRErhJnPM_pTwiI7pGvOTJ4PJJRMTaz4zr-rmio/export?format=xlsx'); // Replace with the actual Google Sheets URL in export format" 
+loadExcelFromGoogleSheet('https://docs.google.com/spreadsheets/d/1_q6IaRErhJnPM_pTwiI7pGvOTJ4PJJRMTaz4zr-rmio/export?format=xlsx'); // Replace with the actual Google Sheets URL in export format
